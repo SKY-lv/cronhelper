@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cron Helper - Cron表达式可视化工具</title>
+<meta name="description" content="免费在线Cron表达式生成器和解析器，可视化配置定时任务，支持秒级精度">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0d1117;color:#c9d1d9;min-height:100vh;}
+.hero{text-align:center;padding:48px 20px 32px;background:linear-gradient(135deg,#161b22,#0d1117);border-bottom:1px solid #30363d;}
+.hero h1{font-size:2.2em;color:#f0f6fc;margin-bottom:8px;}.hero h1 span{color:#58a6ff;}
+.hero p{color:#8b949e;font-size:1em;}
+.badge{display:inline-block;background:#238636;color:#fff;font-size:0.78em;padding:3px 10px;border-radius:20px;margin-top:10px;}
+.container{max-width:900px;margin:0 auto;padding:24px;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:22px;margin-bottom:18px;}
+.card h2{color:#f0f6fc;font-size:1.05em;margin-bottom:14px;border-left:3px solid #58a6ff;padding-left:10px;}
+.cron-display{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;font-family:'Courier New',monospace;font-size:1.8em;color:#79c0ff;text-align:center;letter-spacing:0.15em;margin-bottom:12px;cursor:pointer;}
+.cron-display:hover{border-color:#58a6ff;}
+.fields{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px;}
+.field{text-align:center;}
+.field label{display:block;font-size:0.75em;color:#8b949e;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.field input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-family:'Courier New',monospace;font-size:1em;padding:8px;text-align:center;}
+.field input:focus{outline:none;border-color:#58a6ff;}
+.field input.error{border-color:#f85149;}
+.field-desc{font-size:0.7em;color:#6e7681;margin-top:3px;}
+.presets{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+.preset{padding:6px 12px;background:#21262d;border:1px solid #30363d;border-radius:6px;cursor:pointer;font-size:0.82em;color:#c9d1d9;transition:all 0.2s;}
+.preset:hover{border-color:#58a6ff;color:#58a6ff;}
+.result-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;font-size:0.9em;line-height:1.7;color:#c9d1d9;}
+.result-box .label{color:#8b949e;font-size:0.82em;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.result-box .value{color:#79c0ff;font-family:'Courier New',monospace;}
+.result-box .desc{color:#3fb950;margin-top:6px;}
+.next-runs{margin-top:10px;}
+.next-run-item{padding:4px 0;border-bottom:1px solid #21262d;font-family:'Courier New',monospace;font-size:0.88em;color:#c9d1d9;}
+.next-run-item:last-child{border:none;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:0.85em;font-weight:500;}
+.btn-primary{background:#238636;color:#fff;}.btn-primary:hover{background:#2ea043;}
+.btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d;}.btn-secondary:hover{background:#30363d;}
+.status{position:fixed;bottom:18px;right:18px;background:#238636;color:#fff;padding:9px 18px;border-radius:8px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:999;}
+.status.show{opacity:1;}
+.error-msg{color:#f85149;font-size:0.82em;margin-top:4px;min-height:18px;}
+.tabs{display:flex;gap:0;border-bottom:1px solid #30363d;margin-bottom:16px;}
+.tab{padding:8px 16px;cursor:pointer;font-size:0.88em;color:#8b949e;border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+.parse-input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#79c0ff;font-family:'Courier New',monospace;font-size:1.1em;padding:12px;text-align:center;letter-spacing:0.1em;}
+footer{text-align:center;padding:28px;color:#6e7681;font-size:0.8em;border-top:1px solid #21262d;margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>Cron<span>Helper</span></h1>
+  <p>Cron 表达式可视化生成器 · 解析器 · 下次执行时间预测</p>
+  <span class="badge">✓ 免费 · 无需注册 · 支持秒级精度</span>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('gen')">🔧 生成</div>
+      <div class="tab" onclick="switchTab('parse')">🔍 解析</div>
+    </div>
+
+    <!-- Generator -->
+    <div class="tab-panel active" id="tab-gen">
+      <div class="cron-display" id="cron-display" onclick="copyCron()">* * * * *</div>
+      <div class="fields">
+        <div class="field">
+          <label>秒</label>
+          <input type="text" id="f-sec" value="0" oninput="update()">
+          <div class="field-desc">0-59</div>
+        </div>
+        <div class="field">
+          <label>分钟</label>
+          <input type="text" id="f-min" value="*" oninput="update()">
+          <div class="field-desc">0-59</div>
+        </div>
+        <div class="field">
+          <label>小时</label>
+          <input type="text" id="f-hour" value="*" oninput="update()">
+          <div class="field-desc">0-23</div>
+        </div>
+        <div class="field">
+          <label>日期</label>
+          <input type="text" id="f-day" value="*" oninput="update()">
+          <div class="field-desc">1-31</div>
+        </div>
+        <div class="field">
+          <label>月份</label>
+          <input type="text" id="f-month" value="*" oninput="update()">
+          <div class="field-desc">1-12</div>
+        </div>
+        <div class="field">
+          <label>星期</label>
+          <input type="text" id="f-week" value="*" oninput="update()">
+          <div class="field-desc">0-7(0=日)</div>
+        </div>
+      </div>
+      <div class="error-msg" id="error-msg"></div>
+
+      <h2 style="margin-bottom:10px">⚡ 常用预设</h2>
+      <div class="presets">
+        <div class="preset" onclick="setPreset('0 * * * * *','每分钟')">每分钟</div>
+        <div class="preset" onclick="setPreset('0 */5 * * * *','每5分钟')">每5分钟</div>
+        <div class="preset" onclick="setPreset('0 */15 * * * *','每15分钟')">每15分钟</div>
+        <div class="preset" onclick="setPreset('0 */30 * * * *','每30分钟')">每30分钟</div>
+        <div class="preset" onclick="setPreset('0 0 * * * *','每小时')">每小时</div>
+        <div class="preset" onclick="setPreset('0 0 */2 * * *','每2小时')">每2小时</div>
+        <div class="preset" onclick="setPreset('0 0 9 * * *','每天9点')">每天9点</div>
+        <div class="preset" onclick="setPreset('0 0 12 * * *','每天12点')">每天12点</div>
+        <div class="preset" onclick="setPreset('0 0 18 * * *','每天18点')">每天18点</div>
+        <div class="preset" onclick="setPreset('0 0 0 * * *','每天0点')">每天0点</div>
+        <div class="preset" onclick="setPreset('0 0 9 * * 1','每周一9点')">每周一9点</div>
+        <div class="preset" onclick="setPreset('0 0 9 * * 1-5','工作日9点')">工作日9点</div>
+        <div class="preset" onclick="setPreset('0 0 9 1 * *','每月1号9点')">每月1号</div>
+        <div class="preset" onclick="setPreset('0 0 0 1 1 *','每年1月1日')">每年元旦</div>
+        <div class="preset" onclick="setPreset('0 0/30 9-18 * * 1-5','工作时间每30分')">工作时间每30分</div>
+      </div>
+    </div>
+
+    <!-- Parser -->
+    <div class="tab-panel" id="tab-parse">
+      <div class="label" style="margin-bottom:8px">输入 Cron 表达式</div>
+      <input type="text" class="parse-input" id="parse-input" placeholder="0 0 9 * * 1-5" oninput="parseCron(this.value)">
+      <div class="error-msg" id="parse-error"></div>
+    </div>
+  </div>
+
+  <div class="card" id="result-card">
+    <h2>📋 解析结果</h2>
+    <div class="result-box">
+      <div class="label">表达式</div>
+      <div class="value" id="res-expr">0 * * * * *</div>
+      <div class="desc" id="res-desc">每分钟执行一次</div>
+      <div class="next-runs" id="next-runs"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="copyCron()">📋 复制表达式</button>
+      <button class="btn btn-secondary" onclick="copyDesc()">📝 复制说明</button>
+    </div>
+  </div>
+</div>
+
+<footer>CronHelper · 免费 · 本地计算 · 无数据上传</footer>
+<div class="status" id="status"></div>
+
+<script>
+function showS(m){const e=document.getElementById('status');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2000);}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['gen','parse'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach((el,i)=>el.classList.toggle('active',['tab-gen','tab-parse'][i]==='tab-'+t));
+}
+
+function getFields() {
+  return ['f-sec','f-min','f-hour','f-day','f-month','f-week'].map(id=>document.getElementById(id).value.trim());
+}
+
+function update() {
+  const [sec,min,hour,day,month,week] = getFields();
+  const expr = `${sec} ${min} ${hour} ${day} ${month} ${week}`;
+  document.getElementById('cron-display').textContent = expr;
+  document.getElementById('error-msg').textContent = '';
+  renderResult(expr);
+}
+
+function setPreset(expr, label) {
+  const parts = expr.split(' ');
+  const ids = ['f-sec','f-min','f-hour','f-day','f-month','f-week'];
+  parts.forEach((v,i) => { if(ids[i]) document.getElementById(ids[i]).value = v; });
+  document.getElementById('cron-display').textContent = expr;
+  renderResult(expr);
+}
+
+function parseCron(expr) {
+  expr = expr.trim();
+  if (!expr) return;
+  document.getElementById('parse-error').textContent = '';
+  renderResult(expr);
+}
+
+function renderResult(expr) {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5 || parts.length > 6) {
+    document.getElementById('parse-error').textContent = '格式错误：需要5或6个字段（秒可选）';
+    return;
+  }
+  
+  const desc = describeExpr(expr);
+  document.getElementById('res-expr').textContent = expr;
+  document.getElementById('res-desc').textContent = desc;
+  
+  // Next 5 runs
+  const runs = getNextRuns(expr, 5);
+  const runsHtml = runs.length > 0
+    ? '<div class="label" style="margin-top:12px">下次执行时间</div>' + runs.map(d=>`<div class="next-run-item">${d}</div>`).join('')
+    : '';
+  document.getElementById('next-runs').innerHTML = runsHtml;
+}
+
+function describeExpr(expr) {
+  const parts = expr.trim().split(/\s+/);
+  let [sec, min, hour, day, month, week] = parts.length === 6 ? parts : ['0', ...parts];
+  
+  const descs = [];
+  
+  // Hour/Min description
+  if (min === '*' && hour === '*') descs.push('每分钟');
+  else if (min.startsWith('*/')) descs.push(`每${min.slice(2)}分钟`);
+  else if (hour === '*') descs.push(`每小时第${min}分`);
+  else if (min === '0' && hour.startsWith('*/')) descs.push(`每${hour.slice(2)}小时`);
+  else if (min === '0') descs.push(`每天${hour}点`);
+  else descs.push(`${hour}:${min.padStart(2,'0')}`);
+  
+  // Day/Week
+  if (week !== '*' && week !== '?') {
+    const days = ['日','一','二','三','四','五','六'];
+    if (week === '1-5') descs.push('工作日');
+    else if (week === '0,6' || week === '6,0') descs.push('周末');
+    else {
+      const ws = week.split(',').map(w=>days[parseInt(w)]||w);
+      descs.push(`每周${ws.join('、')}`);
+    }
+  } else if (day !== '*' && day !== '?') {
+    descs.push(`每月${day}号`);
+  }
+  
+  if (month !== '*' && month !== '?') descs.push(`${month}月`);
+  
+  return descs.join(' · ') + ' 执行';
+}
+
+function getNextRuns(expr, count) {
+  try {
+    const parts = expr.trim().split(/\s+/);
+    let [sec, min, hour, day, month, week] = parts.length === 6 ? parts : ['0', ...parts];
+    
+    const results = [];
+    let d = new Date();
+    d.setMilliseconds(0);
+    d.setSeconds(d.getSeconds() + 1);
+    
+    let attempts = 0;
+    while (results.length < count && attempts < 100000) {
+      attempts++;
+      if (matchField(d.getMonth()+1, month) &&
+          matchField(d.getDate(), day) &&
+          matchField(d.getDay(), week) &&
+          matchField(d.getHours(), hour) &&
+          matchField(d.getMinutes(), min) &&
+          matchField(d.getSeconds(), sec)) {
+        const pad = n => String(n).padStart(2,'0');
+        results.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
+        d.setSeconds(d.getSeconds() + 1);
+      } else {
+        d.setSeconds(d.getSeconds() + 1);
+      }
+    }
+    return results;
+  } catch(e) { return []; }
+}
+
+function matchField(val, expr) {
+  if (expr === '*' || expr === '?') return true;
+  if (expr.includes(',')) return expr.split(',').some(e => matchField(val, e.trim()));
+  if (expr.includes('-')) {
+    const [a,b] = expr.split('-').map(Number);
+    return val >= a && val <= b;
+  }
+  if (expr.startsWith('*/')) {
+    const step = parseInt(expr.slice(2));
+    return val % step === 0;
+  }
+  if (expr.includes('/')) {
+    const [start, step] = expr.split('/');
+    const s = start === '*' ? 0 : parseInt(start);
+    return val >= s && (val - s) % parseInt(step) === 0;
+  }
+  return parseInt(expr) === val;
+}
+
+function copyCron() {
+  const expr = document.getElementById('cron-display').textContent || document.getElementById('res-expr').textContent;
+  navigator.clipboard.writeText(expr).then(()=>showS('✅ 已复制表达式'));
+}
+function copyDesc() {
+  const desc = document.getElementById('res-desc').textContent;
+  navigator.clipboard.writeText(desc).then(()=>showS('✅ 已复制说明'));
+}
+
+// Init
+update();
+</script>
+</body>
+</html>
